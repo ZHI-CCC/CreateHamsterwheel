@@ -6,12 +6,12 @@ import com.gly091020.CreateTreadmill.config.TreadmillConfig;
 import com.gly091020.CreateTreadmill.item.TreadmillItem;
 import com.gly091020.CreateTreadmill.maid.MaidPlugin;
 import com.gly091020.CreateTreadmill.renderer.TreadmillRenderer;
-import com.gly091020.CreateTreadmill.renderer.TreadmillVisual;
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.AllCreativeModeTabs;
-import com.simibubi.create.api.stress.BlockStressValues;
+import com.simibubi.create.content.kinetics.BlockStressValues;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.simibubi.create.foundation.data.SharedProperties;
+import com.simibubi.create.foundation.utility.Couple;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
 import com.tterrag.registrate.util.entry.BlockEntry;
 import com.tterrag.registrate.util.entry.ItemEntry;
@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -37,6 +38,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -56,6 +58,7 @@ public class CreateTreadmillMod {
     public static final ItemEntry<TreadmillItem> TREADMILL_ITEM = REGISTRIES
             .item("treadmill", TreadmillItem::new)
             .register();
+
     public static final RegistryObject<CreativeModeTab> CREATIVE_MODE_TAB = CREATIVE_MODE_TAB_REGISTER.register("treadmill",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("tab.createtreadmill.title"))
@@ -66,15 +69,15 @@ public class CreateTreadmillMod {
                     })
                     .build()
     );
+
     public static final BlockEntry<TreadmillBlock> TREADMILL_BLOCK = REGISTRIES
             .block("treadmill", TreadmillBlock::new)
             .initialProperties(SharedProperties::stone)
-            .onRegister(b -> BlockStressValues.CAPACITIES.register(b, CONFIG.TREADMILL_STRESS::get))
             .transform(axeOrPickaxe())
             .register();
+
     public static final BlockEntityEntry<TreadmillBlockEntity> TREADMILL_ENTITY = REGISTRIES
             .blockEntity("treadmill_entity", TreadmillBlockEntity::new)
-            .visual(() -> TreadmillVisual::new)
             .renderer(() -> TreadmillRenderer::new)
             .validBlock(TREADMILL_BLOCK)
             .register();
@@ -85,7 +88,6 @@ public class CreateTreadmillMod {
         ModLoadingContext context = ModLoadingContext.get();
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-        // Using create's weird config system. Just use forge's config bruh
         var specPair = new ForgeConfigSpec.Builder().configure((builder) -> {
             var cfg = new TreadmillConfig();
             cfg.registerAll(builder);
@@ -95,6 +97,21 @@ public class CreateTreadmillMod {
         CONFIG.specification = specPair.getRight();
         context.registerConfig(ModConfig.Type.COMMON, CONFIG.specification);
 
+        BlockStressValues.registerProvider(MOD_ID, new BlockStressValues.IStressValueProvider() {
+            @Override
+            public double getImpact(Block block) { return 0; }
+            @Override
+            public double getCapacity(Block block) {
+                return block == TREADMILL_BLOCK.get() ? CONFIG.TREADMILL_STRESS.get() : 0;
+            }
+            @Override
+            public boolean hasImpact(Block block) { return false; }
+            @Override
+            public boolean hasCapacity(Block block) { return block == TREADMILL_BLOCK.get(); }
+            @Nullable @Override
+            public Couple<Integer> getGeneratedRPM(Block block) { return null; }
+        });
+
         REGISTRIES.registerEventListeners(modBus);
         CREATIVE_MODE_TAB_REGISTER.register(modBus);
         if (ModList.get().isLoaded("touhou_little_maid")) {
@@ -102,12 +119,10 @@ public class CreateTreadmillMod {
         }
 
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> CreateTreadmillClient.onCtorClient(context, modBus));
-
     }
 
     @EventBusSubscriber(value = Dist.CLIENT)
     public static class ClientEventHandler {
-
         @SubscribeEvent
         public static void onRenderEntity(RenderLivingEvent.Pre<?, ?> event) {
             if (WALKING_ENTITY.containsKey(event.getEntity().getId()) && !(event.getEntity() instanceof Player)) {
@@ -123,7 +138,6 @@ public class CreateTreadmillMod {
 
     @EventBusSubscriber
     public static class CommonEventHandler {
-
         @SubscribeEvent
         public static void onEntityDie(LivingDeathEvent deathEvent) {
             var entity = deathEvent.getEntity();
@@ -138,6 +152,5 @@ public class CreateTreadmillMod {
                 }
             }
         }
-
     }
 }

@@ -1,6 +1,6 @@
 package com.gly091020.CreateTreadmill.config;
 
-import net.createmod.catnip.config.ConfigBase;
+import com.simibubi.create.foundation.config.ConfigBase;
 import org.jetbrains.annotations.NotNull;
 
 public class TreadmillConfig extends ConfigBase {

@@ -4,7 +4,7 @@ import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.impl.builders.BooleanToggleBuilder;
 import me.shedaniel.clothconfig2.impl.builders.IntFieldBuilder;
-import net.createmod.catnip.config.ConfigBase;
+import com.simibubi.create.foundation.config.ConfigBase;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -41,8 +41,8 @@ public class ClothConfigScreenGetter {
     }
 
     public static IntFieldBuilder i(ConfigEntryBuilder entryBuilder,
-                                         ConfigBase.ConfigInt configKey,
-                                         String key, int defaultValue, int min, int max){
+                                    ConfigBase.ConfigInt configKey,
+                                    String key, int defaultValue, int min, int max){
         return entryBuilder.startIntField(getTransform(key), configKey.get())
                 .setDefaultValue(defaultValue)
                 .setMax(max).setMin(min)
