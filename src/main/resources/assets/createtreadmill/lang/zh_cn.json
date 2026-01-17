@@ -1,0 +1,48 @@
+{
+  "tab.createtreadmill.title": "机械动力：跑步机",
+
+  "block.createtreadmill.treadmill": "跑步机",
+  "task.createtreadmill.use_treadmill": "跑步机",
+  "task.createtreadmill.use_treadmill.desc": "女仆会使用周围的跑步机",
+  "tip.createtreadmill.speedup": "正在加速，剩余%s秒",
+  "tip.createtreadmill.break": "还有%s秒挣脱",
+
+  "createtreadmill.ponder.treadmill_run.header": "比手摇曲柄更好",
+  "createtreadmill.ponder.treadmill_run.text_1": "这是一台跑步机",
+  "createtreadmill.ponder.treadmill_run.text_2": "可以让生物在上面向前跑来驱动跑步机",
+  "createtreadmill.ponder.treadmill_run.text_3": "玩家可以用拴绳将生物带到跑步机上",
+  "createtreadmill.ponder.treadmill_run.text_4": "但是，它们可能不太愿意……",
+
+  "createtreadmill.ponder.treadmill_fly.header": "装B让你___!",
+  "createtreadmill.ponder.treadmill_fly.text_1": "这台跑步机的应力接反了……",
+  "createtreadmill.ponder.treadmill_fly.text_2": "所以上面的生物会被抛出去。",
+  "createtreadmill.ponder.treadmill_fly.text_3": "我不会移动实体……假装有个村民被推了出去",
+
+  "createtreadmill.ponder.treadmill_speedup.header": "勇敢的木~",
+  "createtreadmill.ponder.treadmill_speedup.text_1": "32 RPM",
+  "createtreadmill.ponder.treadmill_speedup.text_2": "当跑步机上的实体被攻击时，跑步机会加速一分钟（两倍速度，不可叠加）",
+  "createtreadmill.ponder.treadmill_speedup.text_3": "64 RPM",
+  "createtreadmill.ponder.treadmill_speedup.text_4": "但我相信，跑步机上的生物会更想逃脱",
+
+  "createtreadmill.ponder.treadmill_maid.header": "车万女仆？车万奴仆！",
+  "createtreadmill.ponder.treadmill_maid.text_1": "如果你安装了车万女仆，你可以指定女仆任务为“跑步机”来让女仆使用跑步机",
+  "createtreadmill.ponder.treadmill_maid.text_2": "当然，之前的操作也是通用的……",
+  "createtreadmill.ponder.treadmill_maid.text_3": "而且女仆不会轻易逃脱……",
+
+  "advancement.createtreadmill.run_to_die": "资本家",
+  "advancement.createtreadmill.run_to_die.desc": "让一个生物在跑步机上累死（你真残忍……）\n§7（隐藏进度）",
+
+  "config.createtreadmill.title": "机械动力：跑步机 设置",
+  "config.createtreadmill.stress": "跑步机应力",
+  "config.createtreadmill.stress.tip": "设置跑步机产生的应力",
+  "config.createtreadmill.base_speed": "跑步机基础速度",
+  "config.createtreadmill.base_speed.tip": "设置跑步机的基础速度",
+  "config.createtreadmill.drop_it": "跑步机丢人",
+  "config.createtreadmill.drop_it.tip": "跑步机是否可以甩开生物（动力接反时）",
+  "config.createtreadmill.break": "生物挣脱",
+  "config.createtreadmill.break.tip": "在跑步机上的生物是否可以挣脱",
+  "config.createtreadmill.speed_up": "跑步机加速",
+  "config.createtreadmill.speed_up.tip": "攻击跑步机上的生物是否可以加速",
+
+  "config.jade.plugin_createtreadmill.treadmill_provider": "跑步机"
+}

@@ -1,0 +1,337 @@
+package com.gly091020.CreateTreadmill.block;
+
+import com.gly091020.CreateTreadmill.CreateTreadmillMod;
+import com.gly091020.CreateTreadmill.Part;
+import com.simibubi.create.content.kinetics.base.GeneratingKineticBlockEntity;
+import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
+
+import javax.annotation.Nullable;
+import java.util.List;
+
+import static com.gly091020.CreateTreadmill.block.TreadmillBlock.PART;
+import static com.gly091020.CreateTreadmill.block.TreadmillBlock.findPart;
+import static com.simibubi.create.content.kinetics.base.HorizontalKineticBlock.HORIZONTAL_FACING;
+
+public class TreadmillBlockEntity extends GeneratingKineticBlockEntity {
+    private static final float MIN_MOVING = 0.1f;
+
+    private LivingEntity onTreadmillEntity;
+    private boolean isRunning = false;
+    private boolean isRuned = false;
+    private int speedUpTimer = 0;
+    private int entityTimer = Integer.MAX_VALUE;
+
+    public TreadmillBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        setChanged();
+    }
+
+    @Override
+    public void tick() {
+        if (this.getBlockState().getValue(PART) != Part.BOTTOM_FRONT) {
+            return;
+        }
+        if (onTreadmillEntity != null) {
+            if (onTreadmillEntity.isRemoved()) {
+                setOnTreadmillEntity(null);
+                return;
+            }
+            if (!onTreadmillEntity.position().closerThan(getFixedPos(), 1)) {
+                setOnTreadmillEntity(null);
+                return;
+            }
+            setPos();
+            speedUp();
+            // Has to be done for the player too, because deltaMovement is clientside only.
+            // Otherwise would need to send a custom packet, but I'm too lazy for that.
+            onTreadmillEntity.setDeltaMovement(Vec3.atLowerCornerOf(getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING).getNormal()).multiply(0.3f, 0, 0.3f));
+            if (onTreadmillEntity instanceof Player player) {
+                onTreadmillEntity.hurtMarked = true;
+                if (player.isShiftKeyDown() || player.getPose() == Pose.SITTING) {
+                    setOnTreadmillEntity(null);
+                }
+            } else {
+                onTreadmillEntity.lookAt(EntityAnchorArgument.Anchor.EYES, onTreadmillEntity.getEyePosition().relative(getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING), 1));
+                onTreadmillEntity.setPose(Pose.STANDING);
+                if (onTreadmillEntity instanceof TamableAnimal tamableAnimal) {
+                    tamableAnimal.setInSittingPose(false);
+                }
+            }
+            lazyTick();
+            dropIt();
+        }
+        super.tick();
+        if (speedUpTimer == 0) {
+            update();
+            speedUpTimer = -1;
+        }
+        if (speedUpTimer > 0) {
+            speedUpTimer--;
+        }
+        if (entityTimer <= 0) {
+            setOnTreadmillEntity(null);
+        } else if (entityTimer < Integer.MAX_VALUE) {
+            entityTimer--;
+            if (speedUpTimer > 0) {
+                entityTimer--;
+            }
+        }
+    }
+
+    @Override
+    @NotNull
+    public CompoundTag getUpdateTag() {
+        var update = super.getUpdateTag();
+        update.putInt("speedup_timer", speedUpTimer);
+        update.putInt("entity_timer", entityTimer);
+        update.putInt("entity", onTreadmillEntity == null ? -1 : onTreadmillEntity.getId());
+        return update;
+    }
+
+    @Override
+    public void onDataPacket(@NotNull Connection net, @NotNull ClientboundBlockEntityDataPacket pkt) {
+        super.onDataPacket(net, pkt);
+        speedUpTimer = pkt.getTag().getInt("speedup_timer");
+        entityTimer = pkt.getTag().getInt("entity_timer");
+        var id = pkt.getTag().getInt("entity");
+        if (id != -1) {
+            if (level != null) {
+                var entity = level.getEntity(id);
+                if (entity == null) {
+                    return;
+                }
+                setOnTreadmillEntity((LivingEntity) entity);
+            }
+        } else {
+            setOnTreadmillEntity(null);
+        }
+    }
+
+    public void setEntityTimer(int entityTimer) {
+        if (!CreateTreadmillMod.CONFIG.TREADMILL_BREAK.get()) {
+            this.entityTimer = Integer.MAX_VALUE;
+            return;
+        }
+        this.entityTimer = entityTimer;
+    }
+
+    public void setOnTreadmillEntity(@Nullable LivingEntity onTreadmillEntity) {
+        if (onTreadmillEntity == null && this.onTreadmillEntity != null) {
+            this.onTreadmillEntity.setDeltaMovement(Vec3.ZERO);
+            CreateTreadmillMod.WALKING_ENTITY.remove(this.onTreadmillEntity.getId());
+            this.onTreadmillEntity.walkAnimation.setSpeed(0);
+        }
+        if (onTreadmillEntity != null) {
+            CreateTreadmillMod.WALKING_ENTITY.put(onTreadmillEntity.getId(), onTreadmillEntity);
+        } else {
+            speedUpTimer = 0;
+            entityTimer = Integer.MAX_VALUE;
+        }
+        this.onTreadmillEntity = onTreadmillEntity;
+        setPos();
+        update();
+    }
+
+    public Entity getOnTreadmillEntity() {
+        return onTreadmillEntity;
+    }
+
+    public void setPos() {
+        if (onTreadmillEntity != null) {
+            onTreadmillEntity.setPos(getFixedPos());
+            onTreadmillEntity.setOnGround(true);
+        }
+    }
+
+    public void speedUp() {
+        if (!CreateTreadmillMod.CONFIG.TREADMILL_SPEED_UP.get()) {
+            return;
+        }
+        if (onTreadmillEntity.hurtTime > 0 && !(onTreadmillEntity.getLastHurtMob() instanceof Player)) {
+            if (onTreadmillEntity.getLastDamageSource() != null) {
+                speedUpTimer = 1200;
+                update();
+            }
+        }
+    }
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        if (getBlockState().getValue(PART) != Part.BOTTOM_FRONT) {
+            var p = findPart(level, getBlockState(), getBlockPos(), Part.BOTTOM_FRONT);
+            if (level != null && level.getBlockState(p).getValue(PART) == Part.BOTTOM_FRONT &&
+                    level.getBlockEntity(p) instanceof TreadmillBlockEntity treadmillBlockEntity) {
+                treadmillBlockEntity.addToGoggleTooltip(tooltip, isPlayerSneaking);
+                return true;
+            }
+        }
+        super.addToGoggleTooltip(tooltip, isPlayerSneaking);
+        addToolTip(tooltip);
+        return true;
+    }
+
+    public void addToolTip(List<Component> tooltip) {
+        if (getBlockState().getValue(PART) != Part.BOTTOM_FRONT) {
+            var p = findPart(level, getBlockState(), getBlockPos(), Part.BOTTOM_FRONT);
+            if (level != null && level.getBlockState(p).getValue(PART) == Part.BOTTOM_FRONT &&
+                    level.getBlockEntity(p) instanceof TreadmillBlockEntity treadmillBlockEntity) {
+                treadmillBlockEntity.addToolTip(tooltip);
+                return;
+            }
+        }
+        if (speedUpTimer > 0) {
+            tooltip.add(Component.translatable("tip.createtreadmill.speedup", speedUpTimer / 20));
+        }
+        if (entityTimer > 0 && entityTimer < Integer.MAX_VALUE) {
+            tooltip.add(Component.translatable("tip.createtreadmill.break", entityTimer / 20));
+        }
+    }
+
+    public int getSpeedUpTimer() {
+        return speedUpTimer;
+    }
+
+    public Vec3 getFixedPos() {
+        var p = this.getBlockPos().above();
+        var y = p.getY() + 5.5 / 16;
+        switch (getBlockState().getValue(HORIZONTAL_FACING)) {
+            case WEST -> {
+                return new Vec3(p.getX() + 1, y, p.getZ() + 0.5);
+            }
+            case EAST -> {
+                return new Vec3(p.getX(), y, p.getZ() + 0.5);
+            }
+            case NORTH -> {
+                return new Vec3(p.getX() + 0.5, y, p.getZ() + 1);
+            }
+            case SOUTH -> {
+                return new Vec3(p.getX() + 0.5, y, p.getZ());
+            }
+        }
+        return Vec3.atCenterOf(p);
+    }
+
+    public static TreadmillBlockEntity getBlockEntityByEntity(Entity entity) {
+        var level = entity.level();
+        if (level.getBlockState(entity.blockPosition()).is(CreateTreadmillMod.TREADMILL_BLOCK.get())) {
+            var part = TreadmillBlock.findPart(level, level.getBlockState(entity.blockPosition()),
+                    entity.blockPosition(), Part.BOTTOM_FRONT);
+            var e = level.getBlockEntity(part);
+            if (e instanceof TreadmillBlockEntity treadmillBlockEntity) {
+                return treadmillBlockEntity;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void initialize() {
+        super.initialize();
+        if (this.getBlockState().getValue(PART) != Part.BOTTOM_FRONT) {
+            return;
+        }
+        updateGeneratedRotation();
+        setLazyTickRate(10);
+        setChanged();
+    }
+
+    @Override
+    public void lazyTick() {
+        isRunning = isMoving();
+        if (isRunning != isRuned) {
+            isRuned = isRunning;
+            update();
+        }
+        if (isRunning && onTreadmillEntity instanceof Player player) {
+            player.causeFoodExhaustion(getSettingSpeed() * 0.01f);
+        }
+        sendData();
+    }
+
+    private void update() {
+        updateGeneratedRotation();
+        notifyUpdate();
+        sendData();
+    }
+
+    private void dropIt() {
+        if (!CreateTreadmillMod.CONFIG.TREADMILL_DROP_IT.get()) {
+            return;
+        }
+        switch (getBlockState().getValue(TreadmillBlock.HORIZONTAL_FACING)) {
+            case NORTH, EAST -> {
+                if (getSpeed() < 0) {
+                    float m = 3f * (Math.abs(getSpeed()) / 256);
+                    onTreadmillEntity.setDeltaMovement(Vec3.atLowerCornerOf(getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING).getNormal()).multiply(m, 0, m));
+                    onTreadmillEntity = null;
+                }
+            }
+            case SOUTH, WEST -> {
+                if (getSpeed() > 0) {
+                    float m = 3f * (Math.abs(getSpeed()) / 256);
+                    onTreadmillEntity.setDeltaMovement(Vec3.atLowerCornerOf(getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING).getNormal()).multiply(m, 0, m));
+                    onTreadmillEntity = null;
+                }
+            }
+        }
+    }
+
+    @Override
+    public float getGeneratedSpeed() {
+        int speedUp = this.speedUpTimer > 0 ? 2 : 1;
+        if (isRunning) {
+            switch (getBlockState().getValue(TreadmillBlock.HORIZONTAL_FACING)) {
+                case NORTH, EAST -> {
+                    return getSettingSpeed() * speedUp;
+                }
+                case SOUTH, WEST -> {
+                    return -getSettingSpeed() * speedUp;
+                }
+            }
+        }
+        return 0;
+    }
+
+    public float getSettingSpeed() {
+        return CreateTreadmillMod.CONFIG.TREADMILL_BASE_SPEED.get();
+    }
+
+    public boolean isMoving() {
+        if (onTreadmillEntity == null) {
+            return false;
+        }
+        return switch (getBlockState().getValue(TreadmillBlock.HORIZONTAL_FACING)) {
+            case EAST -> onTreadmillEntity.getDeltaMovement().x > MIN_MOVING;
+            case WEST -> onTreadmillEntity.getDeltaMovement().x < -MIN_MOVING;
+            case SOUTH -> onTreadmillEntity.getDeltaMovement().z > MIN_MOVING;
+            case NORTH -> onTreadmillEntity.getDeltaMovement().z < -MIN_MOVING;
+            default -> false;
+        };
+    }
+
+    @Override
+    protected Block getStressConfigKey() {
+        return super.getStressConfigKey();
+    }
+
+    @Override
+    public void destroy() {
+        super.destroy();
+    }
+}
