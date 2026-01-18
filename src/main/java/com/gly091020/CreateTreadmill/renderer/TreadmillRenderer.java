@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
@@ -84,11 +85,18 @@ public class TreadmillRenderer extends KineticBlockEntityRenderer<TreadmillBlock
         if(facing == Direction.SOUTH || facing == Direction.NORTH){
             speed = -speed;
         }
+
         double scroll = speed * renderTick * axisDirection.getStep() / (31.5 * 16);
+
         scroll = scroll - Math.floor(scroll);
         scroll = scroll * 0.062;
 
-        beltBuffer.shiftUVScrolling(spriteShift, (float) scroll);
+        TextureAtlasSprite sprite = spriteShift.getOriginal();
+        float onePixelV = (sprite.getV(16) - sprite.getV(0)) / 16f;
+        float vOffset = -120f * onePixelV;
+
+        beltBuffer.shiftUVScrolling(spriteShift, 0, (float) scroll + vOffset);
+
         beltBuffer.renderInto(ms, vb);
         ms.popPose();
     }

@@ -14,6 +14,7 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -33,7 +34,6 @@ public class TreadmillBlockEntity extends GeneratingKineticBlockEntity {
 
     public TreadmillBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
-        setChanged();
     }
 
     @Override
@@ -236,10 +236,14 @@ public class TreadmillBlockEntity extends GeneratingKineticBlockEntity {
     @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         if (getBlockState().getValue(PART) != Part.BOTTOM_FRONT) {
-            if (level != null && level.getBlockEntity(findPart(level, getBlockState(), getBlockPos(), Part.BOTTOM_FRONT)) instanceof TreadmillBlockEntity be) {
-                return be.addToGoggleTooltip(tooltip, isPlayerSneaking);
+            if (level == null) return false;
+            BlockEntity be = level.getBlockEntity(findPart(level, getBlockState(), getBlockPos(), Part.BOTTOM_FRONT));
+            if (be instanceof TreadmillBlockEntity mainBe && mainBe != this) {
+                return mainBe.addToGoggleTooltip(tooltip, isPlayerSneaking);
             }
+            return false;
         }
+
         super.addToGoggleTooltip(tooltip, isPlayerSneaking);
         addToolTip(tooltip);
         return true;

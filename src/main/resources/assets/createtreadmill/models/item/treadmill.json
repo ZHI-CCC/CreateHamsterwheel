@@ -1,3 +1,5 @@
 {
-  "parent": "createtreadmill:block/treadmill"
+	"format_version": "1.21.11",
+	"credit": "Made with Blockbench",
+	"parent": "createtreadmill:block/treadmill"
 }
